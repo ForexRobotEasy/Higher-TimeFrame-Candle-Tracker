@@ -1,0 +1,125 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                  Higher TimeFrame Candle Tracker |
+//|                                      Copyright 2021, Forex Robot Easy Team  |
+//|                                           https://www.forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Include necessary libraries and define constants                   |
+//+------------------------------------------------------------------+
+#include <Trade\SymbolInfo.mqh>
+
+// Define timeframe constants
+enum Timeframe
+{
+    DAILY = PERIOD_D1,
+    WEEKLY = PERIOD_W1,
+    MONTHLY = PERIOD_MN1
+};
+
+//+------------------------------------------------------------------+
+//| Global variables                                                   |
+//+------------------------------------------------------------------+
+double currentPrice;
+int selectedTimeframe;
+
+//+------------------------------------------------------------------+
+//| Custom indicator function to plot the higher timeframe candle       |
+//+------------------------------------------------------------------+
+void PlotHigherTimeframeCandle()
+{
+    datetime openTime, closeTime;
+    double openPrice, closePrice, highPrice, lowPrice;
+
+    // Get symbol information
+    CSymbolInfo symbol;
+    if(!symbol.Refresh(_Symbol))
+    {
+        Print('Failed to retrieve symbol information!');
+        return;
+    }
+
+    // Calculate the bar size in seconds based on the selected timeframe
+    int barSize = selectedTimeframe * symbol.TimeToSeconds(1);
+
+    // Calculate the index of the current bar
+    int currentIndex = iBarShift(_Symbol, selectedTimeframe, TimeCurrent());
+
+    // Calculate the start time and end time of the higher timeframe candle
+    openTime = iTime(_Symbol, selectedTimeframe, currentIndex);
+    closeTime = openTime + barSize;
+
+    // Retrieve the OHLC prices of the higher timeframe candle
+    openPrice = iOpen(_Symbol, selectedTimeframe, currentIndex);
+    closePrice = iClose(_Symbol, selectedTimeframe, currentIndex);
+    highPrice = iHigh(_Symbol, selectedTimeframe, currentIndex);
+    lowPrice = iLow(_Symbol, selectedTimeframe, currentIndex);
+
+    // Plot the candle on the chart
+    ObjectCreate('HigherTimeframeCandle', OBJ_TREND, 0, openTime, openPrice, closeTime, closePrice);
+    ObjectSet('HigherTimeframeCandle', OBJPROP_COLOR, symbol.BidColor());
+    ObjectSet('HigherTimeframeCandle', OBJPROP_STYLE, STYLE_SOLID);
+    ObjectSet('HigherTimeframeCandle', OBJPROP_WIDTH, 2);
+    ObjectSet('HigherTimeframeCandle', OBJPROP_BACK, true);
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to retrieve the current price in real-time         |
+//+------------------------------------------------------------------+
+double GetCurrentPrice()
+{
+    return SymbolInfoDouble(_Symbol, SYMBOL_BID);
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to handle any errors that may arise during execution |
+//+------------------------------------------------------------------+
+void HandleErrors()
+{
+    int error = GetLastError();
+    if (error != 0)
+    {
+        Print('Error: ', error);
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to select the desired timeframe                     |
+//+------------------------------------------------------------------+
+void SelectTimeframe(int timeframe)
+{
+    selectedTimeframe = timeframe;
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to initialize the program                          |
+//+------------------------------------------------------------------+
+void OnInit()
+{
+    // Set the default timeframe to Daily
+    selectedTimeframe = DAILY;
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to update the current price in real-time           |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    currentPrice = GetCurrentPrice();
+}
+
+//+------------------------------------------------------------------+
+//| Custom function to handle the program's logic                      |
+//+------------------------------------------------------------------+
+void OnStart()
+{
+    // Plot the higher timeframe candle
+    PlotHigherTimeframeCandle();
+
+    // Display current price
+    Print('Current Price: ', currentPrice);
+
+    // Handle any errors
+    HandleErrors();
+}
